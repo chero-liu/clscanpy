@@ -2,10 +2,10 @@
 
 from setuptools import setup, find_packages
 
-from oescanpy.__init__ import __VERSION__
+from clscanpy.__init__ import __VERSION__
 
 setup(
-    name="oescanpy",
+    name="clscanpy",
     version=__VERSION__,
     description="A Python package for single-cell RNA-seq data analysis",
     author="liuchenglong",
@@ -16,7 +16,7 @@ setup(
     packages=find_packages(),
     entry_points={
         "console_scripts": [
-            "oescanpy = oescanpy.oescanpy:main",
+            "clscanpy = clscanpy.clscanpy:main",
         ],
     },
     include_package_data=True,

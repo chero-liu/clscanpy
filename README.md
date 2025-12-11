@@ -1,4 +1,4 @@
-# oescanpy
+# clscanpy
 
 
 
@@ -15,14 +15,14 @@ Already a pro? Just edit this README.md and make it your own. Want to make it ea
 
 ```
 cd existing_repo
-git remote add origin http://gitlab.oebiotech.cn/SingleCell/oescanpy.git
+git remote add origin http://gitlab.oebiotech.cn/SingleCell/clscanpy.git
 git branch -M main
 git push -uf origin main
 ```
 
 ## Integrate with your tools
 
-- [ ] [Set up project integrations](http://gitlab.oebiotech.cn/SingleCell/oescanpy/-/settings/integrations)
+- [ ] [Set up project integrations](http://gitlab.oebiotech.cn/SingleCell/clscanpy/-/settings/integrations)
 
 ## Collaborate with your team
 
