@@ -10,7 +10,9 @@ from scipy.sparse import issparse
 from pyscenic.cli.pyscenic import _load_dbs
 import argparse
 import logging
+
 LOGGER = logging.getLogger(__name__)
+
 
 def filter_genes_for_pyscenic(
     adata: sc.AnnData, feather_files: list, minCountsPerGene: int = 1
@@ -64,7 +66,7 @@ def filter_genes_for_pyscenic(
     cell_mask = n_cells_per_gene > minSamples
     combined_mask = count_mask & cell_mask
     LOGGER.info(f"Genes after cell filter: {combined_mask.sum()}")
-    
+
     var_names_upper = adata.var_names.str.upper()
     db_mask = var_names_upper.isin(genes_in_db)
     final_mask = combined_mask & db_mask
@@ -269,8 +271,6 @@ def normalize_total(
     max_fraction: float = 0.05,
     key_added: Optional[str] = None,
     layer: Optional[str] = None,
-    layers: Optional[List[str]] = None,
-    layer_norm: Optional[str] = None,
     inplace: bool = True,
     copy: bool = False,
 ) -> None:
@@ -313,8 +313,6 @@ def normalize_total(
         max_fraction=max_fraction,
         key_added=key_added,
         layer=layer,
-        layers=layers,
-        layer_norm=layer_norm,
         inplace=inplace,
         copy=copy,
     )

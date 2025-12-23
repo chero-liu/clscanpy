@@ -112,12 +112,14 @@ class Create:
                 data_type = getSingleDataFormat(
                     getattr(line, "datatype", None), line.path
                 )
+
                 adata = read(
                     line.path,
                     prefix=line.sampleid,
                     dtype=data_type,
                     index=(index + 1),
                 )
+
                 ensureSparseMatrix(adata)
 
                 add_names = line.index.drop(["path"])

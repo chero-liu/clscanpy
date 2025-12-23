@@ -2,6 +2,8 @@ from clscanpy.tools.utils import s_common, Step
 from clscanpy.tools.cluster import Cluster
 from clscanpy.tools.rankgenes import RankGenes
 from clscanpy.tools.gcr import GCR
+from clscanpy.tools.enrich import Enrich
+from clscanpy.tools.vismarker import Vismarker
 import unittest
 import matplotlib
 from clscanpy.tools.utils import check_mkdir
@@ -31,31 +33,14 @@ class Clustering(Step):
         self.batch_method = args.batch_method
         self.batch_name = args.batch_name
         self.clust_method = args.clust_method
-        self.min_dist = args.min_dist
         self.resolution = args.resolution
-        self.target_sum = args.target_sum
         self.sampleid = args.sampleid
         self.group = args.group
         self.clusters = args.clusters
         self.new_celltype = args.new_celltype
         self.predicate = args.predicate
-        self.metadata = args.metadata
-        self.method = args.method
         self.palette = args.palette
-        self.use_raw = args.use_raw
-        self.pts = args.pts
-        self.corr_method = args.corr_method
-        self.tie_correct = args.tie_correct
-        self.rankby_abs = args.rankby_abs
-        self.key_added = args.key_added
-        self.minpct = args.minpct
-        self.pvals = args.pvals
         self.refgenome = args.refgenome
-        self.top_n = args.top_n
-        self.n_comps = args.n_comps
-        self.hvg_add = args.hvg_add
-        self.hvg_remove = args.hvg_remove
-        self.hvg_replace = args.hvg_replace
 
     @log_function_call
     def cluster(self):
@@ -66,20 +51,13 @@ class Clustering(Step):
             batch_method=self.batch_method,
             batch_name=self.batch_name,
             clust_method=self.clust_method,
-            min_dist=self.min_dist,
             resolution=self.resolution,
-            target_sum=self.target_sum,
-            outdir=self.outdir,
+            outdir=f"{self.outdir}/Cluster",
             sampleid=self.sampleid,
             group=self.group,
             clusters=self.clusters,
             new_celltype=self.new_celltype,
             predicate=self.predicate,
-            metadata=self.metadata,
-            n_comps=self.n_comps,
-            hvg_add=self.hvg_add,
-            hvg_remove=self.hvg_remove,
-            hvg_replace=self.hvg_replace,
         )
         adata = create_obj.run()
 
@@ -89,19 +67,10 @@ class Clustering(Step):
     def gcr(self, adata):
         gcr_obj = GCR(
             input=adata,
-            outdir=f"{self.outdir}",
+            outdir=f"{self.outdir}/Cluster",
             groupby="clusters",
-            sampleid=None,
-            group=None,
-            clusters=None,
-            new_celltype=None,
-            predicate=None,
-            metadata=None,
             clust_method=self.clust_method,
-            method=self.method,
             palette=self.palette,
-            cloudcfg=False,
-            groupby_levels=None,
             resolution=self.resolution,
         )
         gcr_obj.run()
@@ -110,45 +79,53 @@ class Clustering(Step):
     def rankgenes(self, adata):
         rankgenes_obj = RankGenes(
             adata=adata,
-            outdir=f"{self.outdir}/Markers",
             groupby="clusters",
-            use_raw=self.use_raw,
-            pts=self.pts,
-            method="wilcoxon",
-            corr_method=self.corr_method,
-            tie_correct=self.tie_correct,
-            rankby_abs=self.rankby_abs,
-            key_added=self.key_added,
-            sampleid=None,
-            group=None,
-            clusters=None,
-            new_celltype=None,
-            predicate=None,
-            save_h5ad=False,
         )
         adata = rankgenes_obj.run_RankGeneDefault()
         write_diff_genes(
             adata,
-            outdir=f"{self.outdir}/Markers",
-            minpct=self.minpct,
-            pvals=self.pvals,
-            refgenome=self.refgenome,
+            outdir=f"{self.outdir}/Marker/tables",
+            refgenome=f"{self.refgenome}/annotation/gene_annotation.xls",
             groupby="clusters",
-            top_n=self.top_n,
         )
         return adata
 
+    @log_function_call
+    def vismarker(self, adata):
+        vismarker_obj = Vismarker(
+            input=adata,
+            outdir=f"{self.outdir}/Marker/figures/",
+        )
+        vismarker_obj.run()
+
+    @log_function_call
+    def enrich(self):
+        enrich_obj = Enrich(
+            input=f"{self.outdir}/Marker/tables/all_markers_for_each_cluster_anno.xls",
+            outdir=f"{self.outdir}/Enrich",
+            bp=f"{self.refgenome}/annotation/gmt/mouse_2024_gene_go_bp.gmt",
+            cc=f"{self.refgenome}/annotation/gmt/mouse_2024_gene_go_cc.gmt",
+            mf=f"{self.refgenome}/annotation/gmt/mouse_2024_gene_go_mf.gmt",
+            kegg=f"{self.refgenome}/annotation/gmt/mouse_2024_kegg.gmt",
+            skip_report=False,
+        )
+        enrich_obj.run()
+
     def run(self):
         LOGGER.info("Start Clustering pipeline ...")
-        check_mkdir(f"{self.outdir}/Markers")
+        check_mkdir(f"{self.outdir}")
 
         adata = self.cluster()
 
-        # self.gcr(adata)
+        self.gcr(adata)
 
         adata = self.rankgenes(adata)
 
-        adata.write_h5ad(f"{self.outdir}/adata.h5ad")
+        self.vismarker(adata)
+
+        adata.write_h5ad(f"{self.outdir}/PRO_diff.h5ad")
+
+        self.enrich()
 
 
 @log_function_call
@@ -172,21 +149,15 @@ def get_opts_clustering(parser, sub_program=True):
     )
     parser.add_argument(
         "--n_pcs",
-        type=str,
+        type=int,
         default=10,
         help="Number of principal components (default: 10)",
-    )
-    parser.add_argument(
-        "--n_comps",
-        type=int,
-        default=50,
-        help="(default: 50)",
     )
     parser.add_argument(
         "--batch_method",
         type=str,
         default="No",
-        help="Batch correction method:harmony/combat/scanorama/No",
+        help="Batch correction method: harmony/combat/scanorama/No",
     )
     parser.add_argument(
         "--batch_name",
@@ -201,73 +172,10 @@ def get_opts_clustering(parser, sub_program=True):
         help="Clustering method (default: 'leiden')",
     )
     parser.add_argument(
-        "--min_dist",
-        default="default",
-        help="Minimum distance for clustering (default)",
-    )
-    parser.add_argument(
         "--resolution",
         type=float,
-        default=0.4,
-        help="Resolution for clustering (default: 0.4)",
-    )
-    parser.add_argument(
-        "--target_sum", type=float, default=10000, help="Target sum for normalization"
-    )
-    parser.add_argument(
-        "--method",
-        type=str,
-        default="umap",
-        help="Visualization method (default: 'umap')",
-    )
-    parser.add_argument(
-        "--use_raw",
-        type=bool,
-        default=False,
-        help="Whether to use raw data for differential expression analysis (default: False)",
-    )
-    parser.add_argument(
-        "--pts",
-        type=bool,
-        default=True,
-        help="Whether to calculate percentage of cells expressing each gene (default: True)",
-    )
-    parser.add_argument(
-        "--corr_method",
-        type=str,
-        choices=["benjamini-hochberg", "bonferroni"],
-        default="benjamini-hochberg",
-        help="Correction method for p-values (default: 'benjamini-hochberg')",
-    )
-    parser.add_argument(
-        "--tie_correct",
-        type=bool,
-        default=False,
-        help="Whether to apply tie correction in the ranking algorithm (default: False)",
-    )
-    parser.add_argument(
-        "--rankby_abs",
-        type=bool,
-        default=False,
-        help="Whether to rank genes by absolute values (default: False)",
-    )
-    parser.add_argument(
-        "--key_added",
-        type=str,
-        default=None,
-        help="Key added to adata.uns for storing results",
-    )
-    parser.add_argument(
-        "--minpct",
-        type=float,
-        default=0.25,
-        help="Minimum percentage of cells expressing a gene (default: 0.25)",
-    )
-    parser.add_argument(
-        "--pvals",
-        type=float,
-        default=0.05,
-        help="P-value threshold for filtering genes (default: 0.05)",
+        default=1.2,
+        help="Resolution for clustering (default: 1.2)",
     )
     parser.add_argument(
         "--refgenome",
@@ -275,29 +183,7 @@ def get_opts_clustering(parser, sub_program=True):
         default=None,
         help="Reference genome for annotation (default: None)",
     )
-    parser.add_argument(
-        "--top_n",
-        type=int,
-        default=5,
-        help=" (default: 5)",
-    )
-    parser.add_argument(
-        "--hvg_add",
-        default=None,
-        help="(default: None)",
-    )
-    parser.add_argument(
-        "--hvg_remove",
-        default=None,
-        help="(default: None)",
-    )
-    parser.add_argument(
-        "--hvg_replace",
-        default=None,
-        help="(default: None)",
-    )
 
-    # Common parameters
     if sub_program:
         parser = s_common(parser)
 

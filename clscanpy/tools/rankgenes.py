@@ -384,7 +384,7 @@ def get_opts_rankgenes(parser, sub_program=False):
     parser.add_argument(
         "--top_n",
         type=int,
-        default=5,
+        default=3,
         help="",
     )
     parser.add_argument(

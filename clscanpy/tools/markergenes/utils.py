@@ -15,15 +15,6 @@ from typing import Optional
 
 LOGGER = logging.getLogger(__name__)
 
-COLUMN_MAP = {
-    "names": "gene",
-    "logfoldchanges": "log2FoldChange",
-    "pvals": "p-value",
-    "pvals_adj": "q-value",
-    "pct_nz_group": "pct.1",
-    "pct_nz_reference": "pct.2",
-}
-
 
 def parse_marker_table(file_path):
     """
@@ -115,7 +106,7 @@ def write_diff_genes(
     pval_threshold = pvals_adj if use_pvals_adj else pvals
     pval_label = "qval" if use_pvals_adj else "pval"
     pval_col = "pvals_adj" if use_pvals_adj else "pvals"
-    pval_short_label = "q-value" if use_pvals_adj else "p-value"
+    pval_short_label = "pvals_adj" if use_pvals_adj else "pvals"
 
     # 2. 定义内部辅助函数
     def load_annotation(ref_path: Path) -> pd.DataFrame:
@@ -157,7 +148,7 @@ def write_diff_genes(
     def create_renamed_df(group: str) -> pd.DataFrame:
         """为每个组创建重命名的差异表达数据框"""
         df = sc.get.rank_genes_groups_df(adata, group=group)
-        df["cluster"] = group
+        df["clusters"] = group
         return df
 
     def filter_and_count(df: pd.DataFrame) -> tuple:
@@ -258,9 +249,8 @@ def write_diff_genes(
 
             # 保存结果
             suffix = f"{groupby}_{group}-vs-{reference_group}"
-            filtered_df = filtered_df.rename(columns=COLUMN_MAP)
             filtered_df = (
-                filtered_df.merge(annotation_df, left_on="gene", right_on="id")
+                filtered_df.merge(annotation_df, left_on="names", right_on="id")
                 if annotation_df is not None
                 else filtered_df
             )
@@ -273,19 +263,18 @@ def write_diff_genes(
             save_result(
                 filtered_df,
                 f"{suffix}-diff-{pval_label}-{pval_threshold}-FC-{2 ** logfc}_anno.xls",
-                drop_cols=["cluster", "scores"],
+                drop_cols=["clusters", "scores"],
             )
-            de_df = de_df.rename(columns=COLUMN_MAP)
             # 保存完整结果
             de_df = (
-                de_df.merge(annotation_df, left_on="gene", right_on="id")
+                de_df.merge(annotation_df, left_on="names", right_on="id")
                 if annotation_df is not None
                 else de_df
             )
             save_result(
                 de_df,
                 f"{suffix}-all_diffexp_genes_anno.xls",
-                drop_cols=["cluster", "scores"],
+                drop_cols=["clusters", "scores"],
             )
 
         # 保存统计信息
@@ -314,9 +303,9 @@ def write_diff_genes(
             # 合并所有结果
             full_df = pd.concat([create_renamed_df(g) for g in groups])
             filtered_df = pd.concat(filtered_dfs)
-            filtered_df["gene_diff"] = np.round(
-                filtered_df["pct_nz_group"] / filtered_df["pct_nz_reference"], 3
-            )
+            # filtered_df["gene_diff"] = np.round(
+            #     filtered_df["pct_nz_group"] / filtered_df["pct_nz_reference"], 3
+            # )
 
             filtered_df = (
                 filtered_df.merge(annotation_df, left_on="names", right_on="id")
@@ -327,34 +316,22 @@ def write_diff_genes(
             if annotation_df is not None:
                 filtered_df = filter_protein_coding_genes(filtered_df, annotation_df)
 
-            cluster_order = filtered_df["cluster"].unique().tolist()
+            cluster_order = filtered_df["clusters"].unique().tolist()
 
             temp_df = filtered_df.assign(
                 cluster_cat=pd.Categorical(
-                    filtered_df["cluster"], categories=cluster_order, ordered=True
+                    filtered_df["clusters"], categories=cluster_order, ordered=True
                 )
             )
-
             top_markers_df = (
-                temp_df.sort_values(
-                    ["cluster_cat", "gene_diff"], ascending=[True, False]
-                )
-                .groupby("cluster", sort=False)
+                temp_df.sort_values(["cluster_cat", "scores"], ascending=[True, False])
+                .groupby("clusters", sort=False)
                 .head(top_n)
                 .drop(columns="cluster_cat")
                 .reset_index(drop=True)
-                .rename(columns=COLUMN_MAP)
-            )
-            top_markers_df = top_markers_df.rename(columns=COLUMN_MAP)
-            top_markers_df = top_markers_df.rename(
-                columns={"log2FoldChange": "avg_log2FC"}
             )
 
             save_result(top_markers_df, f"top{top_n}_markers_for_each_cluster_anno.xls")
-
-            # 保存所有标记基因
-            filtered_df = filtered_df.rename(columns=COLUMN_MAP)
-            filtered_df = filtered_df.rename(columns={"log2FoldChange": "avg_log2FC"})
 
             save_result(filtered_df, "all_markers_for_each_cluster_anno.xls")
 

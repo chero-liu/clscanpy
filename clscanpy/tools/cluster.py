@@ -37,7 +37,7 @@ class Cluster:
         batch_name: str = "batchid",
         clust_method: str = "leiden",
         min_dist: str = "default",
-        resolution: float = 0.4,
+        resolution: float = 1.2,
         target_sum: int = 10000,
         outdir: str = None,
         sampleid: Union[str, list] = None,
@@ -45,7 +45,6 @@ class Cluster:
         clusters: Union[str, list] = None,
         new_celltype: Union[str, list] = None,
         predicate: Union[str, list] = None,
-        metadata: Union[str] = None,
         save_h5ad: bool = False,
         hvg_add: str = None,
         hvg_remove: str = None,
@@ -67,7 +66,6 @@ class Cluster:
         self.clusters = clusters
         self.new_celltype = new_celltype
         self.predicate = predicate
-        self.metadata = metadata
         self.save_h5ad = save_h5ad
         self.hvg_add = hvg_add
         self.hvg_remove = hvg_remove
@@ -86,7 +84,6 @@ class Cluster:
             clusters=self.clusters,
             new_celltype=self.new_celltype,
             predicate=self.predicate,
-            metadata=self.metadata,
         )
 
         self.adata = check_adata(self.adata)
@@ -287,7 +284,6 @@ def cluster(args):
         clusters=args.clusters,
         new_celltype=args.new_celltype,
         predicate=args.predicate,
-        metadata=args.metadata,
         save_h5ad=args.save_h5ad,
         hvg_add=args.hvg_add,
         hvg_remove=args.hvg_remove,
@@ -334,12 +330,6 @@ def get_opts_cluster(parser, sub_program=False):
         default=None,
         help="predicate for filtering adata.obs, e.g. (sampleid in ['STB1', 'STB4']) and (clusters in ['1', '5', '6'])",
     )
-    parser.add_argument(
-        "--metadata",
-        type=str,
-        default=None,
-        help="",
-    )
     parser.add_argument("--hvg_num", type=int, default=2000, help="hvg genes number")
     parser.add_argument(
         "--n_pcs",
@@ -378,7 +368,7 @@ def get_opts_cluster(parser, sub_program=False):
     parser.add_argument(
         "--resolution",
         type=float,
-        default=0.4,
+        default=1.2,
         help="a parameter value controlling the coarseness of the clustering",
     )
     parser.add_argument(

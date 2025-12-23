@@ -6,33 +6,32 @@ import unittest
 from clscanpy.tools.utils import check_mkdir
 from clscanpy.log import log_function_call
 
+import logging
+from typing import Union, List
+
 from clscanpy.tools.markergenes.utils import (
     vis_markers,
-    marker_topn,
-    parse_marker_table,
-    filter_and_adjust_markers,
 )
-import logging
+
 
 LOGGER = logging.getLogger(__name__)
 
 
-class VISMARKER:
+class Vismarker:
     def __init__(
         self,
-        input,
-        outdir,
-        groupby,
-        groupby_levels,
-        sampleid,
-        group,
-        clusters,
-        new_celltype,
-        predicate,
-        metadata,
-        method,
-        palette,
-        top,
+        input: str = None,
+        outdir: str = None,
+        groupby: str = "clusters",
+        groupby_levels: str = None,
+        sampleid: Union[str, list] = None,
+        group: Union[str, list] = None,
+        clusters: Union[str, list] = None,
+        new_celltype: Union[str, list] = None,
+        predicate: Union[str, list] = None,
+        method: str = "umap",
+        palette: str = None,
+        top: int = 3,
     ):
         self.input = input
         self.outdir = outdir
@@ -42,7 +41,6 @@ class VISMARKER:
         self.group = group
         self.clusters = clusters
         self.new_celltype = new_celltype
-        self.metadata = metadata
         self.predicate = predicate
         self.method = method
         self.palette = palette
@@ -58,7 +56,6 @@ class VISMARKER:
             clusters=self.clusters,
             new_celltype=self.new_celltype,
             predicate=self.predicate,
-            metadata=self.metadata,
             groupby=self.groupby,
             groupby_levels=self.groupby_levels,
             palette=self.palette,
@@ -82,7 +79,7 @@ class VISMARKER:
 
 @log_function_call
 def vismarker(args):
-    with VISMARKER(
+    with Vismarker(
         input=args.input,
         outdir=args.outdir,
         groupby=args.groupby,
@@ -92,7 +89,6 @@ def vismarker(args):
         clusters=args.clusters,
         new_celltype=args.new_celltype,
         predicate=args.predicate,
-        metadata=args.metadata,
         method=args.method,
         palette=args.palette,
         top=args.top,
@@ -153,12 +149,6 @@ def get_opts_vismarker(parser, sub_program=True):
         type=str,
         default=None,
         help="predicate for filtering adata.obs, e.g. (sampleid in ['STB1', 'STB4']) and ~(clusters in ['1', '5', '6'])",
-    )
-    parser.add_argument(
-        "--metadata",
-        type=str,
-        default=None,
-        help="Metadata file to load, if not provided, will use adata.obs",
     )
     return parser
 

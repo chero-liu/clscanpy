@@ -569,6 +569,9 @@ def get_h5ad(
         elif input.endswith(".h5seurat") or input.endswith(".rds"):
             adata = convert_seurat_to_anndata(input, use_raw_counts=False)
             return adata
+        elif str(input).endswith(".h5"):
+            adata = sc.read_10x_h5(input)
+            return adata
         else:
             raise ValueError("Input file must be .h5ad, rds, h5seurat format")
     elif isinstance(input, sc.AnnData):

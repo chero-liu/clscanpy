@@ -8,6 +8,7 @@ __STEPS__ = [
     "create",
     "autoanno",
     "faceted_plot",
+    "enrich",
 ]
 __ASSAY__ = "tools"
 __PREFIX__ = "clscanpy"

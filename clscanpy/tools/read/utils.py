@@ -121,11 +121,11 @@ class MultiSpeciesSplitter:
 def getSingleDataFormat(datatype, filename):
     if not datatype:
         if os.path.isdir(filename):
-            return "mtx-10x"
+            return "mtx"
         elif filename.endswith(".h5ad"):
-            return "h5ad-10x"
+            return "h5ad"
         else:
-            return "normal-10x"
+            return "normal"
     else:
         return datatype
 
