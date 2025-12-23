@@ -1,5 +1,4 @@
 __STEPS__ = [
-    "rds2h5ad",
     "gcr",
     "cluster",
     "h5ad2rds",

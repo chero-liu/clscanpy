@@ -4,7 +4,6 @@ from typing import Tuple, Optional, List, Union
 from pathlib import Path
 from clscanpy.tools.read.utils import (
     validate_and_normalize_adata,
-    convert_seurat_to_anndata,
 )
 from anndata import AnnData
 import pandas as pd
@@ -566,14 +565,11 @@ def get_h5ad(
             if validate_normalize:
                 adata = validate_and_normalize_adata(adata)
             return adata
-        elif input.endswith(".h5seurat") or input.endswith(".rds"):
-            adata = convert_seurat_to_anndata(input, use_raw_counts=False)
-            return adata
         elif str(input).endswith(".h5"):
             adata = sc.read_10x_h5(input)
             return adata
         else:
-            raise ValueError("Input file must be .h5ad, rds, h5seurat format")
+            raise ValueError("Input file must be .h5ad, format")
     elif isinstance(input, sc.AnnData):
         if validate_normalize:
             input = validate_and_normalize_adata(input)
