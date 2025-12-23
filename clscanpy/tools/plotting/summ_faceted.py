@@ -13,7 +13,7 @@ from clscanpy.tools.utils import save_figure
 from pandas.api.types import CategoricalDtype
 import os
 import math
-import clscanpy as oep
+import clscanpy as csc
 
 
 def summ_faceted_plot(
@@ -147,7 +147,7 @@ def summ_faceted_plot(
                 group_axes = axes[ax_idx : ax_idx + ncols]
                 for ax, sample in zip(group_axes, samples):
                     sample_data = adata[adata.obs[groupby] == sample]
-                    oep.plot_dim(
+                    csc.plot_dim(
                         sample_data,
                         color=color,
                         palette=color_dict,
@@ -282,7 +282,7 @@ def _plot_single_level(
         )
         for ax, sample in zip(axes, samples):
             sample_data = adata[adata.obs[groupby] == sample]
-            oep.plot_dim(
+            csc.plot_dim(
                 sample_data,
                 color=color,
                 palette=color_dict,

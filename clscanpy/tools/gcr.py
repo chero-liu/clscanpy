@@ -1,7 +1,7 @@
 # get clusters result
 import os
 import pandas as pd
-import clscanpy as oep
+import clscanpy as csc
 import unittest
 from clscanpy.tools.utils import (
     check_mkdir,
@@ -64,7 +64,7 @@ def save_dimension_reduction_results(
     # add counts to the 'clusters' column
     # adata.obs = add_counts_to_data(adata.obs, color_by)
 
-    oep.plot_dim(
+    csc.plot_dim(
         adata,
         method=method,
         color=color_by,
@@ -86,7 +86,7 @@ def save_dimension_reduction_results(
     )
     save_figure(plot_file)
 
-    oep.plot_dim(
+    csc.plot_dim(
         adata,
         method=method,
         color=color_by,
@@ -217,7 +217,7 @@ class GCR:
 
     def run(self):
         LOGGER.info("Start GCR ...")
-        adata = oep.loadH5AD(
+        adata = csc.loadH5AD(
             self.input,
             sampleid=self.sampleid,
             group=self.group,

@@ -113,7 +113,6 @@ def run_annotation(
             f"🛑 无效模型名称: '{model}'. 可用模型: {', '.join(celltypist.models.get_all_models())}"
         )
 
-    # 检查模型特征数与输入数据基因数的兼容性
     logger.info("检查模型特征数与输入数据基因数的兼容性...")
     model_obj = celltypist.models.Model.load(model)
     model_genes = set(model_obj.features)
@@ -130,21 +129,16 @@ def run_annotation(
     if overlap_percent < 50:
         logger.warning(f"⚠️ 警告: 基因重叠率低于50%，可能影响注释准确性")
 
-    # output dir
     if outdir is None:
         outdir = os.getcwd()
         logger.warn(f"👀 输出目录未指定，使用当前目录: '{outdir}'")
 
-    # 处理输出目录
     outdir = Path(str(outdir))
     outdir.mkdir(parents=True, exist_ok=True)  # 创建输出目录
-
-    # 设置文件路径
 
     fig_dir = outdir / "figures"  # 图片目录
     fig_dir.mkdir(exist_ok=True)
 
-    # config settings
     config = {
         "indata": indata,
         "model": model,
@@ -160,7 +154,7 @@ def run_annotation(
         config["over-clustering"] = (
             over_clustering if over_clustering != "auto" else None
         )
-        config["use-gpu"] = use_gpu
+        config["use-gpu"] = False
         config["min-prop"] = min_prop
 
     # quiet or not
@@ -178,10 +172,10 @@ def run_annotation(
         model=model,
         mode=mode.replace("_", " "),
         majority_voting=majority_voting,
-        over_clustering=over_clustering,  # 现在如果是'auto'会被设置为None
+        over_clustering=over_clustering,
         p_thres=p_thres,
         min_prop=min_prop,
-        use_GPU=use_gpu,
+        use_GPU=False,
     )
     t_end = time.time()
     logger.info(f"预测完成，耗时: {(t_end - t_start)/60:.2f} 分钟")
@@ -234,7 +228,7 @@ def visualize_results(
         cell_type_colors = select_colors(
             object=adata.obs, value=cell_type_key, palette=palette
         )
-
+        print(f"cell_type_colors:{cell_type_colors}")
         # 添加颜色列到obs
         adata.obs[f"{cell_type_key}_col"] = adata.obs[cell_type_key].map(
             cell_type_colors
@@ -336,13 +330,6 @@ def visualize_results(
     help="已有的常规聚类结果列名，在最终汇总统计时候需要，注意该值并不用于过度聚类",
 )
 @click.option(
-    "--resolution",
-    default=0.8,
-    type=float,
-    show_default=True,
-    help="聚类分辨率，用于常规聚类，注意该值与过度聚类无关，主要用于cluster-key参数设置为空时，采用scanpy进行leiden聚类",
-)
-@click.option(
     "--mode",
     default="best_match",
     type=click.Choice(["best_match", "prob_match"]),
@@ -373,12 +360,6 @@ def visualize_results(
     "也可以指定obs中对应的过度聚类列名，但考虑到我们通常不会进行过度聚类，所以默认使用是auto，"
     "由软件自动进行过度聚类。",
     type=str,
-)
-@click.option(
-    "--use-gpu",
-    default=False,
-    show_default=True,
-    help="是否使用GPU，用于过度聚类scanpy加速，目前尚不支持，默认为False",
 )
 @click.option(
     "--min-prop",
@@ -419,7 +400,6 @@ def main(
     model_path,
     output_path,
     cluster_key,
-    resolution,
     mode,
     majority_voting,
     p_thres,
@@ -467,7 +447,7 @@ def main(
         plot_results=plot_results,
         update_models=update_models,
         show_models=show_models,
-        use_gpu=use_gpu,
+        use_gpu=False,
         over_clustering=over_clustering,
     )
 

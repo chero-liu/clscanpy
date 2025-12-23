@@ -2,7 +2,7 @@ from anndata import AnnData
 from typing import Optional, Literal, Union, List, Tuple
 from clscanpy.tools.markergenes.rank_genes_groups import rank_genes_groups
 import scanpy as sc
-import clscanpy as oep
+import clscanpy as csc
 from clscanpy.tools.utils import check_mkdir
 import os
 import numpy as np
@@ -83,7 +83,7 @@ class RankGenes:
         AnnData object with differential expression results.
         """
         check_mkdir(self.outdir)
-        self.adata = oep.loadH5AD(
+        self.adata = csc.loadH5AD(
             self.adata,
             sampleid=self.sampleid,
             group=self.group,
@@ -147,7 +147,7 @@ class RankGenes:
         AnnData object with differential expression results.
         """
         check_mkdir(self.outdir)
-        self.adata = oep.loadH5AD(
+        self.adata = csc.loadH5AD(
             self.adata,
             sampleid=self.sampleid,
             group=self.group,

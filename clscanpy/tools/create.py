@@ -25,7 +25,7 @@ from clscanpy.tools.preprocessing.basicpreprocessing import (
     _mtfilter,
     find_outliers,
 )
-import clscanpy as oep
+import clscanpy as csc
 import random
 import os
 import unittest
@@ -168,7 +168,7 @@ class Create:
                 adata.obs["group"], categories=group_order, ordered=True
             )
         else:
-            adata = oep.loadH5AD(self.info)
+            adata = csc.loadH5AD(self.info)
             adata = clean_adata(
                 adata, ["nCount_RNA", "nFeature_RNA", "percent.HB", "percent.mito"]
             )
@@ -371,7 +371,7 @@ class Create:
         )
         adata = save_parameters_to_anndata(adata, argu)
 
-        adata = oep.loadH5AD(adata)
+        adata = csc.loadH5AD(adata)
         if self.save_h5ad:
             adata = clean_adata(adata)
             adata.write_h5ad(os.path.join(self.outdir, "filtered.h5ad"))

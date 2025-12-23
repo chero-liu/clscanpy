@@ -2,7 +2,7 @@ from typing import List, Dict, Optional, Tuple, Union
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 import scanpy as sc
-import clscanpy as oep
+import clscanpy as csc
 
 
 def plot_qc_violin(
@@ -16,7 +16,7 @@ def plot_qc_violin(
     save_formats: Tuple[str, ...] = ("png", "pdf"),
     groupby_levels: Union[str, list] = None,
 ):
-    adata = oep.loadH5AD(adata, groupby=groupby, groupby_levels=groupby_levels)
+    adata = csc.loadH5AD(adata, groupby=groupby, groupby_levels=groupby_levels)
     sorted_groups = adata.obs[groupby].cat.categories.tolist()
     max_len = max(len(group) for group in sorted_groups)
     n_samples = len(sorted_groups)

@@ -1,4 +1,4 @@
-import clscanpy as oep
+import clscanpy as csc
 import anndata as ad
 import numpy as np
 import os
@@ -51,7 +51,7 @@ class Faceted_plot:
     def run(self):
         LOGGER.info(f"Start faceted_plot ...")
         random.seed(2025)
-        self.adata = oep.loadH5AD(
+        self.adata = csc.loadH5AD(
             self.adata,
             sampleid=self.sampleid,
             group=self.group,

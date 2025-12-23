@@ -1,7 +1,7 @@
 # get clustering result
 import os
 import pandas as pd
-import clscanpy as oep
+import clscanpy as csc
 import unittest
 from clscanpy.tools.utils import check_mkdir
 from clscanpy.log import log_function_call
@@ -49,7 +49,7 @@ class Vismarker:
     def run(self):
         LOGGER.info("Start vismarker ...")
         check_mkdir(self.outdir)
-        adata = oep.loadH5AD(
+        adata = csc.loadH5AD(
             self.input,
             sampleid=self.sampleid,
             group=self.group,

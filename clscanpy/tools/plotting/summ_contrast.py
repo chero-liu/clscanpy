@@ -1,4 +1,4 @@
-import clscanpy as oep
+import clscanpy as csc
 import anndata as ad
 from clscanpy.tools.color.utils import get_color_order
 import os
@@ -16,7 +16,7 @@ def summ_contrast_plot(
     method: str = "umap",
 ):
     color_use = get_color_order(adata, color, palette)
-    oep.plot_dim(
+    csc.plot_dim(
         adata,
         method=method,
         color=color,

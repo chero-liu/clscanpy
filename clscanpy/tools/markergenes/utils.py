@@ -5,7 +5,7 @@ from anndata import AnnData
 import pandas as pd
 from clscanpy.log import log_function_call
 from clscanpy.tools.plotting.heatmap import plot_marker_heatmap
-import clscanpy as oep
+import clscanpy as csc
 from clscanpy.tools.utils import is_valid_path
 from pathlib import Path
 from clscanpy.tools.color.utils import get_color_order
@@ -402,7 +402,7 @@ def vis_markers(
     save_figure(f"{outdir}/{top}dotplot")
 
     for key in marker_dict:
-        oep.plot_dim(
+        csc.plot_dim(
             adata, method=method, color=marker_dict[key], show=False, figsize=(5, 5)
         )
         save_figure(f"{outdir}/markers_vis4cluster{key}_featureplot")

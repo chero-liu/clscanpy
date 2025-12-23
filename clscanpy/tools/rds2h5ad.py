@@ -1,7 +1,7 @@
 import unittest
 import os
 from clscanpy.tools.read.utils import convert_seurat_to_anndata
-import clscanpy as oep
+import clscanpy as csc
 from clscanpy.tools.utils import Step
 from clscanpy.log import log_function_call
 

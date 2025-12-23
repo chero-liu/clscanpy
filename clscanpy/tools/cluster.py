@@ -1,7 +1,7 @@
 from anndata import AnnData
 import unittest
 import os
-import clscanpy as oep
+import clscanpy as csc
 from clscanpy.tools.utils import (
     check_adata,
     retrieve_layers,
@@ -77,7 +77,7 @@ class Cluster:
         check_mkdir(self.outdir)
         random.seed(12345)
 
-        self.adata = oep.loadH5AD(
+        self.adata = csc.loadH5AD(
             self.adata,
             sampleid=self.sampleid,
             group=self.group,
@@ -186,7 +186,7 @@ class Cluster:
             os.path.join(self.outdir, "arguments.txt"),
         )
         self.adata = save_parameters_to_anndata(self.adata, argu)
-        self.adata = oep.loadH5AD(self.adata)
+        self.adata = csc.loadH5AD(self.adata)
 
         if self.save_h5ad:
             self.adata.write_h5ad(os.path.join(self.outdir, "adata.h5ad"))

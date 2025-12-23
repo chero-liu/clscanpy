@@ -3,7 +3,7 @@ from anndata import AnnData
 import warnings
 from clscanpy.tools.color.colors import add_color_to_dataframe
 
-import clscanpy as oep
+import clscanpy as csc
 
 
 def get_color_order(
@@ -28,7 +28,7 @@ def get_color_order(
         TypeError: 输入对象不是AnnData
     """
     color_col = f"{use_col}_col"
-    adata = oep.loadH5AD(
+    adata = csc.loadH5AD(
         adata,
         groupby=use_col,
         groupby_levels=use_col_levels,

@@ -1,7 +1,7 @@
 import os
 from clscanpy.tools.utils import s_common, Step, check_mkdir, check_adata
 import unittest
-import clscanpy as oep
+import clscanpy as csc
 from clscanpy.tools.preprocessing.basicpreprocessing import filter_genes_for_pyscenic
 from clscanpy.script.pyscenic.utils import Analysis, Visualize
 from clscanpy.config import ROOT_PATH
@@ -81,7 +81,7 @@ class pySCENIC(Step):
 
     @log_function_call
     def datapreparation(self):
-        adata = oep.loadH5AD(
+        adata = csc.loadH5AD(
             input=self.input,
             sampleid=self.sampleid,
             group=self.group,
