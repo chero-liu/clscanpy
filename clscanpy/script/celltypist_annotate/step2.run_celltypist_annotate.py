@@ -1,12 +1,3 @@
-"""
-作者: xiufeng.yang xiufeng.yang@oebiotech.com
-日期: 2025-02-19 13:49:01
-最后编辑者: xiufeng.yang xiufeng.yang@oebiotech.com
-最后编辑时间: 2025-02-27 10:26:55
-文件路径: \oe-smt\run_celltypist_annotate.py
-描述: Celltypist细胞类型注释脚本
-"""
-
 import click
 import os
 import scanpy as sc
@@ -15,9 +6,7 @@ import time
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from clscanpy.tools.read.utils import convert_seurat_to_anndata
 from clscanpy.tools.utils import setup_logger
-from utils import update_h5seurat_metadata
 from color import select_colors
 import matplotlib.pyplot as plt
 
@@ -47,13 +36,8 @@ def load_and_preprocess_data(input_path, filter_gene=None):
         adata: 预处理后的AnnData对象
     """
     logger.info(f"加载数据: {input_path}")
-    if input_path.endswith(".h5seurat") or input_path.endswith(".rds"):
-        adata = convert_seurat_to_anndata(input_path, use_raw_counts=False)
-    else:
-        adata = sc.read_h5ad(input_path)
-    # if filter_gene:
-    #     logger.info("过滤表达细胞数少于10的基因...")
-    #     adata= sc.pp.filter_genes(adata, min_cells=10)
+    adata = sc.read_h5ad(input_path)
+
     logger.info("检查数据是否已经进行了log转换")
     is_valid_range = (adata.X[:1000].min() >= 0) and (adata.X[:1000].max() <= 9.22)
     is_valid_sum = np.abs(np.expm1(adata.X[0]).sum() - 1e4) <= 1
@@ -87,101 +71,6 @@ def load_and_preprocess_data(input_path, filter_gene=None):
         logger.info("数据已经进行了正确的log1p标准化")
 
     return adata
-
-
-def prepare_clusters(adata, cluster_key=None, resolution=0.8):
-    """准备聚类结果
-
-    参数:
-        adata: AnnData对象
-        cluster_key: 已有的聚类结果列名，如果为None则重新聚类
-        resolution: 聚类分辨率
-    """
-    if cluster_key is None or cluster_key not in adata.obs.columns:
-        logger.info("未指定有效的聚类结果，进行新的聚类...")
-        # 计算PCA
-        if "X_pca" not in adata.obsm:
-            # 创建临时副本进行处理，保持原始.X不变
-            temp_adata = adata.copy()
-
-            # 过滤表达细胞数少于10的基因
-            logger.info("过滤表达细胞数少于10的基因...")
-            sc.pp.filter_genes(temp_adata, min_cells=10)
-            logger.info(f"过滤后剩余基因数: {temp_adata.n_vars}")
-
-            sc.pp.highly_variable_genes(temp_adata, n_top_genes=2000)
-            sc.pp.scale(temp_adata)
-            sc.tl.pca(temp_adata, svd_solver="arpack")
-            # 将计算结果复制回原始对象
-            adata.obsm["X_pca"] = temp_adata.obsm["X_pca"]
-            adata.var["highly_variable"] = pd.Series(False, index=adata.var_names)
-            adata.var.loc[temp_adata.var_names, "highly_variable"] = temp_adata.var[
-                "highly_variable"
-            ]
-            del temp_adata
-
-        # 计算邻居图
-        if "neighbors" not in adata.uns:
-            temp_adata = adata.copy()
-            sc.pp.neighbors(temp_adata, n_neighbors=15, n_pcs=30)
-            # 复制邻居图信息回原始对象
-            adata.uns["neighbors"] = temp_adata.uns["neighbors"]
-            adata.obsp["distances"] = temp_adata.obsp["distances"]
-            adata.obsp["connectivities"] = temp_adata.obsp["connectivities"]
-            del temp_adata
-
-        # 计算UMAP
-        if "X_umap" not in adata.obsm:
-            temp_adata = adata.copy()
-            sc.tl.umap(temp_adata)
-            # 复制UMAP结果回原始对象
-            adata.obsm["X_umap"] = temp_adata.obsm["X_umap"]
-            del temp_adata
-
-        # 执行leiden聚类
-        sc.tl.leiden(adata, resolution=resolution)
-        cluster_key = "leiden"
-        logger.info(f"完成聚类，共{len(adata.obs[cluster_key].unique())}个簇")
-    else:
-        logger.info(f"使用已有的聚类结果: {cluster_key}")
-
-        # 如果没有UMAP，也计算一下
-        if "X_umap" not in adata.obsm:
-            # 确保有PCA和neighbors
-            if "X_pca" not in adata.obsm:
-                temp_adata = adata.copy()
-
-                # 过滤表达细胞数少于10的基因
-                logger.info("过滤表达细胞数少于10的基因...")
-                sc.pp.filter_genes(temp_adata, min_cells=10)
-                logger.info(f"过滤后剩余基因数: {temp_adata.n_vars}")
-
-                sc.pp.highly_variable_genes(temp_adata, n_top_genes=2000)
-                sc.pp.scale(temp_adata)
-                sc.tl.pca(temp_adata, svd_solver="arpack")
-                adata.obsm["X_pca"] = temp_adata.obsm["X_pca"]
-                adata.var["highly_variable"] = pd.Series(False, index=adata.var_names)
-                adata.var.loc[temp_adata.var_names, "highly_variable"] = temp_adata.var[
-                    "highly_variable"
-                ]
-                del temp_adata
-
-            if "neighbors" not in adata.uns:
-                temp_adata = adata.copy()
-                sc.pp.neighbors(temp_adata, n_neighbors=15, n_pcs=30)
-                adata.uns["neighbors"] = temp_adata.uns["neighbors"]
-                adata.obsp["distances"] = temp_adata.obsp["distances"]
-                adata.obsp["connectivities"] = temp_adata.obsp["connectivities"]
-                del temp_adata
-
-            # 计算UMAP
-            temp_adata = adata.copy()
-            sc.tl.umap(temp_adata)
-            adata.obsm["X_umap"] = temp_adata.obsm["X_umap"]
-            del temp_adata
-            logger.info("已计算UMAP降维")
-
-    return cluster_key
 
 
 def run_annotation(
@@ -549,12 +438,8 @@ def main(
     此脚本用于使用Celltypist模型进行细胞类型注释。
 
     主要功能包括：
-    1. 数据预处理：标准化和log转换
-    2. 可选的聚类分析
     3. 使用指定模型进行细胞类型预测
-    4. 保存注释结果和统计信息
 
-    示例用法：
     python run_celltypist_annotate.py
         --input input.h5seurat
         --model-path model.pkl
@@ -567,10 +452,6 @@ def main(
     adata = load_and_preprocess_data(input)
     logger.info(f"数据形状: {adata.shape}")
     print("输入数据基因名称示例:", list(adata.var_names[:5]))
-
-    logger.info("step2:如果cluster_key参数为空，则采用scanpy进行聚类===========")
-    if cluster_key is not None:
-        cluster_key = prepare_clusters(adata, cluster_key, resolution)
 
     logger.info("step3:运行细胞类型注释=======================================")
     adata = run_annotation(
@@ -600,33 +481,12 @@ def main(
     )
 
     logger.info("step5:保存对象==============================================")
-    if input.endswith(".h5ad"):
-        # 保存h5ad文件
-        h5ad_file = f"{output_path}/adata.h5ad"  # h5ad文件
-        logger.info(f"保存注释结果到: {h5ad_file}")
-        # 'predicted_labels', 'over_clustering','majority_voting', 'conf_score'
-        # del adata.obs['predicted_labels']
-        # del adata.obs['over_clustering']
-        # del adata.obs['majority_voting']
-        # del adata.obs['conf_score']
-        adata.write_h5ad(str(h5ad_file))
-        metadata = adata.obs
-        metadata.insert(0, "Barcode", metadata.index)
-        metadata.to_csv(f"{output_path}/metadata.tsv", index=False, sep="\t")
-
-    else:
-        # 将adata.obs中特定列更新至seurat对象中
-        h5seurat_file = f"{output_path}/adata.h5ad"
-        update_h5seurat_metadata(
-            adata=adata,
-            h5seurat_path=input,
-            output_h5seurat=h5seurat_file,
-            col_names=[
-                "predicted_labels",
-                "celltypist_cell_type",
-                "celltypist_cell_type_col",
-            ],
-        )
+    h5ad_file = f"{output_path}/adata.h5ad"
+    logger.info(f"保存注释结果到: {h5ad_file}")
+    adata.write_h5ad(str(h5ad_file))
+    metadata = adata.obs
+    metadata.insert(0, "Barcode", metadata.index)
+    metadata.to_csv(f"{output_path}/metadata.tsv", index=False, sep="\t")
 
 
 if __name__ == "__main__":
