@@ -164,17 +164,6 @@ class Create:
             order = [str(x) for x in order]
             adata.obs[slot] = adata.obs[slot].cat.set_categories(order)
 
-        # rename obs slot name
-        adata.obs.rename(
-            columns={
-                "n_genes_by_counts": "nFeature_RNA",
-                "total_counts": "nCount_RNA",
-                "pct_counts_mt": "percent_mt",
-                "pct_counts_hb": "percent_hb",
-            },
-            inplace=True,
-        )
-
         adata.obs.rename(columns={"spname": "sample"}, inplace=True)
 
         del adata.obs["n_genes"]
@@ -185,8 +174,8 @@ class Create:
             filter_sample.append(sample)
             filter_cells.append(tmp.shape[0])
             filter_genes.append(tmp.shape[1])
-            filter_umi.append(np.median(tmp.obs["nCount_RNA"]))
-            filter_gene.append(np.median(tmp.obs["nFeature_RNA"]))
+            filter_umi.append(np.median(tmp.obs["total_counts"]))
+            filter_gene.append(np.median(tmp.obs["n_genes_by_counts"]))
 
         raw_df = pd.DataFrame(
             dict(

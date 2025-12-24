@@ -16,148 +16,6 @@ import logging
 LOGGER = logging.getLogger(__name__)
 
 
-def update_adata_from_metadata(
-    adata: AnnData,
-    metadata_path: str,
-    id_col: str = "rawbc",
-) -> AnnData:
-    """
-    Update AnnData object with metadata from a CSV/TSV file.
-    Parameters:
-    - adata: AnnData object to update
-    - metadata_path: Path to metadata file (CSV or TSV)
-    - id_col: Column name used for cell matching (default: "rawbc")
-
-    Returns:
-    Updated AnnData object with additional columns from metadata
-
-    Raises:
-    - FileNotFoundError: If metadata file does not exist
-    - ValueError: If ID column not found
-    """
-
-    if not isinstance(adata, AnnData):
-        raise TypeError("adata must be an AnnData object")
-    if not os.path.exists(metadata_path):
-        raise FileNotFoundError(f"Metadata file not found: {metadata_path}")
-    if not isinstance(id_col, str) or not id_col:
-        raise ValueError("id_col must be a non-empty string")
-
-    ext = os.path.splitext(metadata_path)[1].lower()
-    sep = "\t" if ext == ".tsv" else ","
-
-    try:
-        subdata = pd.read_csv(metadata_path, sep=sep, dtype={id_col: str}, engine="c")
-        LOGGER.info(
-            f"Loaded metadata: {subdata.shape[0]} rows, {subdata.shape[1]} columns"
-        )
-    except Exception as e:
-        LOGGER.exception(f"Error reading metadata file: {metadata_path}")
-        raise
-
-    original_obs_cols = len(adata.obs.columns)
-    LOGGER.debug(f"Original adata.obs columns: {original_obs_cols}")
-
-    if subdata[id_col].duplicated().any():
-        duplicate_ids = subdata[subdata.duplicated(subset=id_col, keep=False)][
-            id_col
-        ].unique()
-        LOGGER.warning(
-            f"Found {len(duplicate_ids)} duplicate {id_col} values in metadata. "
-            "Keeping first occurrence and dropping duplicates."
-        )
-        subdata = subdata.drop_duplicates(subset=id_col, keep="first")
-        LOGGER.info(
-            f"Reduced metadata to {subdata.shape[0]} rows after removing duplicates"
-        )
-
-    if id_col not in subdata.columns:
-        err_msg = f"ID column '{id_col}' not found in metadata columns: {subdata.columns.tolist()}"
-        LOGGER.error(err_msg)
-        raise ValueError(err_msg)
-
-    if id_col not in adata.obs.columns:
-        err_msg = f"ID column '{id_col}' not found in adata.obs columns: {adata.obs.columns.tolist()}"
-        LOGGER.error(err_msg)
-        raise ValueError(err_msg)
-
-    adata.obs[id_col] = adata.obs[id_col].astype(str).str.strip()
-    subdata[id_col] = subdata[id_col].astype(str).str.strip()
-
-    original_size = adata.n_obs
-    valid_ids = set(subdata[id_col])
-    cell_mask = adata.obs[id_col].isin(valid_ids)
-
-    if cell_mask.sum() == 0:
-        sample_ids = adata.obs[id_col].head(5).tolist()
-        err_msg = (
-            f"No matching IDs found. Metadata has {len(valid_ids)} unique IDs, "
-            f"first 5 AnnData IDs: {sample_ids}"
-        )
-        LOGGER.error(err_msg)
-        raise ValueError(err_msg)
-
-    adata = adata[cell_mask].copy()
-    kept = adata.n_obs
-    LOGGER.info(
-        f"Filtered cells using '{id_col}'. Kept {kept}/{original_size} cells "
-        f"({kept/original_size:.1%})"
-    )
-
-    metadata_non_id_cols = [col for col in subdata.columns if col != id_col]
-
-    new_cols = [col for col in metadata_non_id_cols if col not in adata.obs.columns]
-
-    update_cols = [col for col in metadata_non_id_cols if col in adata.obs.columns]
-
-    all_cols = update_cols + new_cols
-
-    if not all_cols:
-        LOGGER.info("No columns to update or add")
-        return adata
-
-    expected_final_cols = original_obs_cols + len(new_cols)
-    LOGGER.info(
-        f"Will add {len(new_cols)} new columns and update {len(update_cols)} existing columns. "
-        f"Expected final columns: {expected_final_cols}"
-    )
-
-    mapping_df = subdata.set_index(id_col)[all_cols].copy()
-
-    for col in all_cols:
-        col_series = mapping_df[col].astype(str).str.strip()
-
-        if col_series.index.duplicated().any():
-            LOGGER.warning(
-                f"Column '{col}' has duplicate IDs. Keeping first occurrence."
-            )
-            col_series = col_series[~col_series.index.duplicated(keep="first")]
-
-        adata.obs[col] = adata.obs[id_col].map(col_series)
-
-        na_count = adata.obs[col].isna().sum()
-        if na_count > 0:
-            LOGGER.warning(
-                f"Column '{col}' has {na_count} missing values after mapping"
-            )
-
-    final_cols = len(adata.obs.columns)
-    if final_cols != expected_final_cols:
-        LOGGER.warning(
-            f"Unexpected column count: Expected {expected_final_cols}, Actual {final_cols}"
-        )
-
-    if new_cols:
-        LOGGER.info(f"Added new columns to adata.obs: {sorted(new_cols)}")
-
-    LOGGER.info(
-        f"Successfully updated/added {len(all_cols)} columns. "
-        f"Final adata.obs columns: {final_cols} (original: {original_obs_cols})"
-    )
-
-    return adata
-
-
 def standardize_colors(
     adata: AnnData,
     use_col: List[str],
@@ -196,9 +54,9 @@ def standardize_colors(
     # Default palettes for common columns
     SPECIAL_PALETTES = {
         "group": "group_default",
-        "sampleid": "cellpaper_custom",
-        "clusters": "customecol2_light",
-        "new_celltype": "tableau20",
+        "sample": "cellpaper_custom",
+        "cluster": "customecol2_light",
+        "celltype": "tableau20",
     }
 
     # Create palette list with defaults if not provided
@@ -251,12 +109,11 @@ def standardize_colors(
 
 def subsetH5AD(
     adata,
-    sampleid=None,
+    sample=None,
     group=None,
-    clusters=None,
-    new_celltype=None,
+    cluster=None,
+    celltype=None,
     predicate=None,
-    metadata=None,
 ):
     """
     使用标准化分隔符处理函数增强的AnnData子集筛选
@@ -264,13 +121,13 @@ def subsetH5AD(
     Parameters:
         adata : AnnData
             输入的AnnData对象
-        sampleid : str (可选)
+        sample : str (可选)
             逗号分隔的样本ID，支持!前缀排除，如 "S1,!S2"
         group : str (可选)
             逗号分隔的分组名称，支持!前缀排除
-        clusters : str (可选)
+        cluster : str (可选)
             逗号分隔的细胞簇ID，支持!前缀排除
-        new_celltype : str (可选)
+        celltype : str (可选)
             逗号分隔的细胞类型，支持!前缀排除
         predicate : str (可选)
             Pandas风格的逻辑表达式
@@ -292,10 +149,10 @@ def subsetH5AD(
 
     # 处理每个过滤条件
     filter_params = [
-        ("new_celltype", new_celltype),
-        ("sampleid", sampleid),
+        ("celltype", celltype),
+        ("sample", sample),
         ("group", group),
-        ("clusters", clusters),
+        ("cluster", cluster),
     ]
 
     for col, value in filter_params:
@@ -316,20 +173,12 @@ def subsetH5AD(
         except Exception as e:
             raise ValueError(f"逻辑表达式错误: {predicate}\n错误详情: {str(e)}")
 
-    if metadata:
-        # Determine separator based on file extension
-        adata = update_adata_from_metadata(
-            adata,
-            metadata_path=metadata,
-            id_col="rawbc",
-        )
-
     # Standardize levels for relevant columns
     use_col = [
-        "sampleid",
+        "sample",
         "group",
-        "clusters",
-        "new_celltype",
+        "cluster",
+        "celltype",
     ]
 
     variables = get_predicate_vars(predicate)
@@ -599,7 +448,7 @@ def get_downsample_adata(
         raise ValueError("'error_threshold' must be a non-negative number.")
 
     if group_by is None:
-        group_by = "clusters"
+        group_by = "cluster"
 
     if group_by not in adata.obs.columns:
         raise ValueError(f"'group_by' must be a valid column name in adata.obs.")
@@ -691,12 +540,11 @@ def get_downsample_adata(
 
 def loadH5AD(
     input: Union[str, Path, sc.AnnData],
-    sampleid: Union[str, list] = None,
+    sample: Union[str, list] = None,
     group: Union[str, list] = None,
-    clusters: Union[str, list] = None,
-    new_celltype: Union[str, list] = None,
+    cluster: Union[str, list] = None,
+    celltype: Union[str, list] = None,
     predicate: Union[str, list] = None,
-    metadata: Union[str] = None,
     downsample: int = None,
     groupby: str = None,
     groupby_levels: Union[str, list] = None,
@@ -710,16 +558,16 @@ def loadH5AD(
         Can be either:
         - Path to .h5ad file
         - Existing AnnData object
-    sampleid : Union[str, list], optional
+    sample : Union[str, list], optional
         Sample ID(s) to filter cells by. If None, all samples are included.
     group : Union[str, list], optional
         Group(s) to filter cells by. If None, all groups are included.
-    clusters : Union[str, list], optional
-        Cluster(s) to filter cells by. If None, all clusters are included.
-    new_celltype : Union[str, list], optional
+    cluster : Union[str, list], optional
+        Cluster(s) to filter cells by. If None, all cluster are included.
+    celltype : Union[str, list], optional
         New cell type(s) to filter cells by. If None, all cell types are included.
     predicate : Union[str, list], optional
-        Predicate(s) to filter cells by. If None, all predicates are included.predicate="(sampleid in ['STB1', 'STB4']) and (clusters in ['1', '5', '6'])"
+        Predicate(s) to filter cells by. If None, all predicates are included.predicate="(sample in ['STB1', 'STB4']) and (cluster in ['1', '5', '6'])"
     downsample : int, optional
         Number of cells to downsample to. If None, no downsampling is performed.
     groupby : str, optional
@@ -736,10 +584,10 @@ def loadH5AD(
     # Load the h5ad file or return the AnnData object directly
     adata = get_h5ad(input)
     use_col = [
-        "sampleid",
+        "sample",
         "group",
-        "clusters",
-        "new_celltype",
+        "cluster",
+        "celltype",
         groupby,
     ]
 
@@ -752,12 +600,11 @@ def loadH5AD(
     # subset the AnnData object
     adata = subsetH5AD(
         adata,
-        sampleid=sampleid,
+        sample=sample,
         group=group,
-        clusters=clusters,
-        new_celltype=new_celltype,
+        cluster=cluster,
+        celltype=celltype,
         predicate=predicate,
-        metadata=metadata,
     )
     if groupby_levels != None:
         adata = standardize_levels(
@@ -767,7 +614,7 @@ def loadH5AD(
         )
 
     # standardize_colors
-    adata = standardize_colors(adata, ["sampleid", "group", "clusters", "new_celltype"])
+    adata = standardize_colors(adata, ["sample", "group", "cluster", "celltype"])
     adata = standardize_colors(adata, [groupby], [palette])
 
     adata = get_downsample_adata(
