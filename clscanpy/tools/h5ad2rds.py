@@ -18,7 +18,7 @@ class H5ad2Rds:
     @property
     def shell_script(self):
         shell_script_content = f"""
-module purge && module load OESingleCell/3.0.d || source /data/software/OESingelCell/miniconda3/etc/profile.d/conda.sh && conda deactivate && source /data/software/OESingelCell/miniconda3/etc/profile.d/conda.sh && conda activate /data/software/OESingelCell/miniconda3/envs/OESingelCell
+source /opt/miniconda3/etc/profile.d/conda.sh && conda activate clscanpy
 Rscript {ROOT_PATH}/script/data_transformation/h5ad2rds.r -i {self.input}
 """
         return shell_script_content
